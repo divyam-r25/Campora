@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "Campora",
+    "slug": "campus-connect",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "backgroundColor": "#161B33"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.campusconnect.app"
+    },
+    "android": {
+      "package": "com.campusconnect.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#161B33"
+      }
+    },
+    "extra": {
+      "apiUrl": "http://localhost:4000/api"
+    }
+  }
+}

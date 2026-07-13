@@ -1,0 +1,346 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// TENANCY
+// ─────────────────────────────────────────────
+
+model College {
+  id         String   @id @default(uuid())
+  name       String
+  domain     String   @unique // e.g. "srmuniv.edu.in" — used to auto-verify signups
+  inviteCode String?  @unique // fallback for colleges without a clean email domain
+  createdAt  DateTime @default(now())
+
+  users               User[]
+  clubs               Club[]
+  announcements       Announcement[]
+  events              Event[]
+  groups              Group[]
+  lostFoundPosts      LostFoundPost[]
+  marketplaceListings MarketplaceListing[]
+  attendanceReminders AttendanceReminder[]
+  reports             Report[]
+}
+
+// ─────────────────────────────────────────────
+// USERS & AUTH
+// ─────────────────────────────────────────────
+
+enum Role {
+  STUDENT
+  CLUB_ADMIN
+  FACULTY
+  SUPER_ADMIN
+}
+
+model User {
+  id           String   @id @default(uuid())
+  collegeId    String
+  college      College  @relation(fields: [collegeId], references: [id])
+  email        String   @unique
+  passwordHash String
+  name         String
+  avatarUrl    String?
+  role         Role     @default(STUDENT)
+  isVerified   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  refreshTokens  RefreshToken[]
+  clubMembers    ClubMember[]
+  announcements  Announcement[]      @relation("AnnouncementAuthor")
+  eventsCreated  Event[]             @relation("EventCreator")
+  eventRSVPs     EventRSVP[]
+  groupMembers   GroupMember[]
+  messages       Message[]
+  lostFoundPosts LostFoundPost[]
+  listings       MarketplaceListing[]
+  reminders      AttendanceReminder[]
+  notifications  Notification[]
+  reportsFiled   Report[]            @relation("Reporter")
+
+  @@index([collegeId])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────
+// CLUBS & ANNOUNCEMENTS
+// ─────────────────────────────────────────────
+
+model Club {
+  id          String   @id @default(uuid())
+  collegeId   String
+  college     College  @relation(fields: [collegeId], references: [id])
+  name        String
+  description String?
+  logoUrl     String?
+  verified    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  members       ClubMember[]
+  announcements Announcement[]
+  events        Event[]
+
+  @@index([collegeId])
+}
+
+enum ClubRole {
+  MEMBER
+  ADMIN
+}
+
+model ClubMember {
+  id     String   @id @default(uuid())
+  clubId String
+  club   Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   ClubRole @default(MEMBER)
+
+  @@unique([clubId, userId])
+}
+
+model Announcement {
+  id        String   @id @default(uuid())
+  collegeId String
+  college   College  @relation(fields: [collegeId], references: [id])
+  clubId    String?
+  club      Club?    @relation(fields: [clubId], references: [id])
+  authorId  String
+  author    User     @relation("AnnouncementAuthor", fields: [authorId], references: [id])
+  title     String
+  body      String
+  imageUrl  String?
+  createdAt DateTime @default(now())
+
+  @@index([collegeId, createdAt])
+}
+
+// ─────────────────────────────────────────────
+// EVENTS
+// ─────────────────────────────────────────────
+
+model Event {
+  id          String   @id @default(uuid())
+  collegeId   String
+  college     College  @relation(fields: [collegeId], references: [id])
+  clubId      String?
+  club        Club?    @relation(fields: [clubId], references: [id])
+  createdById String
+  createdBy   User     @relation("EventCreator", fields: [createdById], references: [id])
+  title       String
+  description String?
+  location    String?
+  bannerUrl   String?
+  startTime   DateTime
+  endTime     DateTime
+  createdAt   DateTime @default(now())
+
+  rsvps EventRSVP[]
+
+  @@index([collegeId, startTime])
+}
+
+enum RSVPStatus {
+  INTERESTED
+  GOING
+  CHECKED_IN
+}
+
+model EventRSVP {
+  id          String     @id @default(uuid())
+  eventId     String
+  event       Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      RSVPStatus @default(INTERESTED)
+  checkedInAt DateTime?
+
+  @@unique([eventId, userId])
+}
+
+// ─────────────────────────────────────────────
+// GROUPS / CHAT
+// ─────────────────────────────────────────────
+
+model Group {
+  id        String   @id @default(uuid())
+  collegeId String
+  college   College  @relation(fields: [collegeId], references: [id])
+  name      String
+  isDirect  Boolean  @default(false) // true = 1:1 chat
+  createdAt DateTime @default(now())
+
+  members  GroupMember[]
+  messages Message[]
+
+  @@index([collegeId])
+}
+
+enum GroupRole {
+  MEMBER
+  ADMIN
+}
+
+model GroupMember {
+  id       String    @id @default(uuid())
+  groupId  String
+  group    Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     GroupRole @default(MEMBER)
+  joinedAt DateTime  @default(now())
+
+  @@unique([groupId, userId])
+}
+
+model Message {
+  id            String    @id @default(uuid())
+  groupId       String
+  group         Group     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  senderId      String
+  sender        User      @relation(fields: [senderId], references: [id])
+  content       String?
+  attachmentUrl String?
+  createdAt     DateTime  @default(now())
+  editedAt      DateTime?
+  deletedAt     DateTime?
+
+  @@index([groupId, createdAt])
+}
+
+// ─────────────────────────────────────────────
+// LOST & FOUND
+// ─────────────────────────────────────────────
+
+enum LostFoundType {
+  LOST
+  FOUND
+}
+
+enum LostFoundStatus {
+  OPEN
+  RESOLVED
+}
+
+model LostFoundPost {
+  id          String          @id @default(uuid())
+  collegeId   String
+  college     College         @relation(fields: [collegeId], references: [id])
+  userId      String
+  user        User            @relation(fields: [userId], references: [id])
+  type        LostFoundType
+  title       String
+  description String?
+  imageUrl    String?
+  location    String?
+  status      LostFoundStatus @default(OPEN)
+  createdAt   DateTime        @default(now())
+
+  @@index([collegeId, status])
+}
+
+// ─────────────────────────────────────────────
+// MARKETPLACE
+// ─────────────────────────────────────────────
+
+enum ListingStatus {
+  AVAILABLE
+  SOLD
+}
+
+model MarketplaceListing {
+  id          String        @id @default(uuid())
+  collegeId   String
+  college     College       @relation(fields: [collegeId], references: [id])
+  sellerId    String
+  seller      User          @relation(fields: [sellerId], references: [id])
+  title       String
+  description String?
+  price       Decimal       @db.Decimal(10, 2)
+  category    String
+  imageUrls   String[]
+  status      ListingStatus @default(AVAILABLE)
+  createdAt   DateTime      @default(now())
+
+  @@index([collegeId, status, category])
+}
+
+// ─────────────────────────────────────────────
+// ATTENDANCE REMINDERS
+// ─────────────────────────────────────────────
+
+model AttendanceReminder {
+  id                String   @id @default(uuid())
+  collegeId         String
+  college           College  @relation(fields: [collegeId], references: [id])
+  userId            String
+  user              User     @relation(fields: [userId], references: [id])
+  courseName        String
+  daysOfWeek        Int[] // 0=Sunday ... 6=Saturday
+  classTime         String // "14:30" (24h, stored as string, interpreted in user's local tz client-side)
+  notifyBeforeMins  Int      @default(10)
+  createdAt         DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────
+// NOTIFICATIONS
+// ─────────────────────────────────────────────
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String
+  data      Json?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+}
+
+// ─────────────────────────────────────────────
+// MODERATION
+// ─────────────────────────────────────────────
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+}
+
+model Report {
+  id         String       @id @default(uuid())
+  collegeId  String
+  college    College      @relation(fields: [collegeId], references: [id])
+  reporterId String
+  reporter   User         @relation("Reporter", fields: [reporterId], references: [id])
+  targetType String // "message" | "listing" | "post" etc.
+  targetId   String
+  reason     String
+  status     ReportStatus @default(PENDING)
+  createdAt  DateTime     @default(now())
+
+  @@index([collegeId, status])
+}
