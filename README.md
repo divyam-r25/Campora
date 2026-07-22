@@ -1,74 +1,127 @@
 # Campora
 
-A multi-tenant campus social app — announcements, events, groups/chat,
-marketplace, lost & found, and attendance reminders, built to work for any
-college, not just one.
+A multi-tenant campus social app — announcements, events, groups/chat, marketplace, lost & found, and attendance reminders — built to work for **any college, not just one**.
 
-Read these in order:
-1. **ARCHITECTURE.md** — the full system design and why it's built this way
-2. **ROADMAP.md** — the week-by-week build plan
-3. **backend/README.md** — backend setup
-4. Mobile setup — below
+## Tech Stack
 
-## Quick start
+| Layer | Tech |
+|---|---|
+| Mobile | React Native (Expo) |
+| Backend | Node.js + Express + TypeScript |
+| Database | PostgreSQL via Prisma ORM |
+| Auth | JWT (access + refresh token rotation) |
+| Multi-tenancy | College-domain verified signup |
 
-**Backend** (see `backend/README.md` for full detail):
+## Project Structure
+
+```
+campora/
+├── backend/          # Express API (TypeScript)
+│   ├── prisma/       # Schema, migrations, seed
+│   └── src/
+│       ├── modules/
+│       │   ├── auth/           # Signup, login, refresh, logout
+│       │   └── announcements/  # Feed + create endpoints
+│       ├── middleware/         # Auth guard, role guard, validation
+│       ├── config/             # Env validation (Zod)
+│       └── utils/
+└── mobile/           # Expo (React Native + TypeScript)
+    └── src/
+        ├── screens/
+        │   ├── auth/           # Login, Signup
+        │   ├── home/           # Home dashboard
+        │   └── announcements/  # Feed, New Announcement
+        ├── components/         # AnnouncementCard, EmptyState
+        ├── hooks/              # useAnnouncements
+        ├── services/           # API service layer
+        ├── context/            # Auth context
+        └── navigation/         # Stack + Tab navigator
+```
+
+## Quick Start
+
+### 1. Backend
+
 ```bash
 cd backend
 npm install
-cp .env.example .env   # fill in DATABASE_URL
+cp .env.example .env     # fill in DATABASE_URL (Postgres connection string)
 npx prisma generate
 npx prisma migrate dev --name init
-npm run dev
+npx tsx prisma/seed.ts   # seeds a College row (domain: sst.scaler.com)
+npm run dev              # starts on http://localhost:4000
 ```
 
-**Mobile:**
+> See `backend/README.md` for full environment variable reference.
+
+### 2. Mobile
+
 ```bash
 cd mobile
 npm install
 npx expo start
 ```
-Scan the QR code with Expo Go on your phone, or press `i`/`a` for a simulator.
-If testing on a physical device, change `apiUrl` in `mobile/app.json` from
-`localhost` to your machine's local network IP (`localhost` won't resolve
-from a phone on the same wifi).
 
-## Troubleshooting: signup/login fails on a physical device
+Scan the QR code with **Expo Go** on your phone, or press `i` / `a` for a simulator.
 
-This is the most common first blocker, and it's two separate issues that
-look identical from the error banner:
+> **Physical device?** Edit `mobile/app.json` → `expo.extra.apiUrl` — replace `localhost` with your machine's LAN IP (e.g. `http://192.168.1.42:4000/api`). Your phone and computer must be on the same Wi-Fi. Restart `expo start` after the change.
 
-**1. Find your computer's LAN IP** (the machine running the backend):
+## Troubleshooting: Signup / Login Fails on a Physical Device
+
+This is the most common first blocker — two separate issues that look identical:
+
+**1 — Find your machine's LAN IP:**
+
 ```bash
-# Mac
+# macOS
 ipconfig getifaddr en0
+
 # Windows (PowerShell)
-ipconfig        # look for "IPv4 Address" under your active adapter
+ipconfig       # look for "IPv4 Address" under your active adapter
+
 # Linux
 hostname -I
 ```
-Then edit `mobile/app.json` → `expo.extra.apiUrl` → replace `localhost` with
-that IP, e.g. `http://192.168.1.42:4000/api`. Your phone and computer must be
-on the same wifi network. Restart `expo start` after changing this.
 
-**2. Seed a College row** so your email domain is recognized:
+Update `expo.extra.apiUrl` in `mobile/app.json` and restart `expo start`.
+
+**2 — Seed a College row** so your email domain is recognised:
+
 ```bash
 cd backend
 npx tsx prisma/seed.ts
 ```
-This creates one College with domain `sst.scaler.com` — edit
-`prisma/seed.ts` first if your email domain is different.
 
-With the updated error handling in this version, if you still see a failure
-after both fixes, the app will now show you the *actual* reason (network
-unreachable vs. a specific validation message from the server) instead of
-one generic message — that'll tell you exactly which of the two this is.
+This creates one College with domain `sst.scaler.com`. Edit `prisma/seed.ts` before running if your email domain is different.
 
-## What's built vs what's next
+## Promoting a User to Club Admin (for testing announcements)
 
-**Phase 0 (auth + multi-tenancy)** and **Phase 1 (announcements)** are
-complete and compile cleanly — see ROADMAP.md for exactly what each covers
-and what to test before moving on.
+The signup flow always creates `STUDENT` users. To test posting announcements:
 
-Everything else — events, chat, marketplace, lost & found, attendance — is
-fully designed in the schema and API map but not yet built.
+```bash
+cd backend
+npx prisma studio
+# Open the User table → change your role to CLUB_ADMIN → Save
+```
+
+## What's Built
+
+| Phase | Feature | Status |
+|---|---|---|
+| 0 | Auth (signup, login, JWT refresh, roles) + multi-tenancy | ✅ Done |
+| 0 | Mobile navigation shell, session persistence, auto token refresh | ✅ Done |
+| 1 | Announcements feed (cursor-paginated, infinite scroll, pull-to-refresh) | ✅ Done |
+| 1 | Create announcement (CLUB_ADMIN / SUPER_ADMIN only) | ✅ Done |
+
+## What's Next
+
+| Phase | Feature |
+|---|---|
+| 2 | Events + RSVP + QR check-in |
+| 3 | Groups & Chat (Socket.io) |
+| 4 | Marketplace (image upload → S3/Cloudinary) |
+| 5 | Lost & Found |
+| 6 | Attendance reminders + push notifications (Expo Push + BullMQ) |
+| 7 | Polish — moderation, rate limiting, EAS Build / App Store |
+
+See `ROADMAP.md` for the full week-by-week plan and `ARCHITECTURE.md` for system design decisions.
