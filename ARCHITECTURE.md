@@ -1,4 +1,4 @@
-# Campus Connect — System Architecture
+# Campora — System Architecture
 
 ## 1. Core design decision: multi-tenancy
 

@@ -1,4 +1,4 @@
-# Campus Connect — Backend
+# Campora — Backend
 
 ## Setup
 

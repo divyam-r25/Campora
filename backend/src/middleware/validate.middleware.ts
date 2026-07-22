@@ -14,3 +14,18 @@ export function validateBody(schema: ZodSchema) {
     next();
   };
 }
+
+export function validateQuery(schema: ZodSchema) {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const result = schema.safeParse(req.query);
+    if (!result.success) {
+      return next(
+        ApiError.badRequest("Invalid query parameters", result.error.flatten())
+      );
+    }
+    // Stash parsed/coerced query on a separate key — req.query itself is a
+    // getter-only property on some Express versions and can't be reassigned.
+    req.validatedQuery = result.data;
+    next();
+  };
+}

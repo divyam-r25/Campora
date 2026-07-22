@@ -15,14 +15,21 @@ also just... how you avoid a pile of half-finished features in month three.
 working end-to-end against a real Postgres DB. Break it on purpose (expired
 token, wrong password, duplicate email) and confirm the errors are sane.
 
-## Phase 1 — Announcements (week 1-2)
-The simplest possible full-stack feature: mostly-read CRUD. Good first module
-to build yourself using the auth module as a template (route → controller →
-service, same shape).
-- Backend: `GET /announcements` (paginated, scoped to collegeId), `POST` (club-admin+)
-- Mobile: feed screen, pull-to-refresh, empty state
-- This is where you'll first feel the value of the tenant-scoping pattern —
-  every query filtered by `req.user.collegeId`
+## Phase 1 — Announcements (done)
+- Backend: `GET /api/announcements` (cursor-paginated, scoped to `collegeId`), `POST /api/announcements` (CLUB_ADMIN/SUPER_ADMIN only, optional `clubId` with cross-tenant guard)
+- Mobile: feed screen (pull-to-refresh, infinite scroll, empty state), create screen gated behind role, feed auto-refreshes when you return to it after posting
+
+**Your job before moving on:** to test posting, you'll need a user with role
+`CLUB_ADMIN` or `SUPER_ADMIN` — the signup flow always creates `STUDENT`
+users, so promote one by hand for now:
+```bash
+cd backend
+npx prisma studio
+# open the User table, change your role field to CLUB_ADMIN, save
+```
+A real "become a club admin" flow (club creation + membership approval) is
+its own future phase — this is a deliberate shortcut for now, not the real
+mechanism.
 
 ## Phase 2 — Events (week 2-3)
 - RSVP model already in the schema

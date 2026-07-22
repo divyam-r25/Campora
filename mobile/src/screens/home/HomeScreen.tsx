@@ -10,7 +10,7 @@ export function HomeScreen() {
   return (
     <SafeAreaView style={styles.flex}>
       <View style={styles.container}>
-        <Text style={styles.eyebrow}>CAMPUS CONNECT</Text>
+        <Text style={styles.eyebrow}>CAMPORA</Text>
         <Text style={styles.title}>Hey {user?.name.split(" ")[0]} 👋</Text>
         <Text style={styles.subtitle}>
           You're logged in and verified for your college. The announcements

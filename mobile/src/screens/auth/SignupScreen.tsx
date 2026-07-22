@@ -36,10 +36,19 @@ export function SignupScreen({ navigation }: Props) {
         inviteCode: inviteCode.trim() || undefined,
       });
     } catch (err: any) {
-      setError(
-        err?.response?.data?.error ??
-          "Couldn't create your account. Double check your college email."
-      );
+      if (err?.response) {
+        // Server responded with an error — show its actual message
+        // (e.g. "We don't recognize this college", "email already exists")
+        setError(err.response.data?.error ?? "Something went wrong. Try again.");
+      } else if (err?.request) {
+        // Request went out but no response came back — almost always
+        // means the phone can't reach the backend at all
+        setError(
+          "Can't reach the server. Check that the backend is running and EXPO_PUBLIC_API_URL points to your computer's IP, not localhost."
+        );
+      } else {
+        setError("Something went wrong. Try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -51,7 +60,7 @@ export function SignupScreen({ navigation }: Props) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.eyebrow}>CAMPUS CONNECT</Text>
+        <Text style={styles.eyebrow}>CAMPORA</Text>
         <Text style={styles.title}>Create your account</Text>
         <Text style={styles.subtitle}>
           Use your college email — it verifies you automatically. No college

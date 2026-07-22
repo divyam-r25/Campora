@@ -29,7 +29,15 @@ export function LoginScreen({ navigation }: Props) {
     try {
       await login({ email: email.trim().toLowerCase(), password });
     } catch (err: any) {
-      setError(err?.response?.data?.error ?? "Couldn't log you in. Check your details and try again.");
+      if (err?.response) {
+        setError(err.response.data?.error ?? "Something went wrong. Try again.");
+      } else if (err?.request) {
+        setError(
+          "Can't reach the server. Check that the backend is running and EXPO_PUBLIC_API_URL points to your computer's IP, not localhost."
+        );
+      } else {
+        setError("Something went wrong. Try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -41,7 +49,7 @@ export function LoginScreen({ navigation }: Props) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.eyebrow}>CAMPUS CONNECT</Text>
+        <Text style={styles.eyebrow}>CAMPORA</Text>
         <Text style={styles.title}>Welcome back</Text>
         <Text style={styles.subtitle}>Log in with your college email</Text>
 
